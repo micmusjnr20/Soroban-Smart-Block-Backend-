@@ -3,6 +3,9 @@ import { prismaRead, prismaWrite } from '../db';
 import { z } from 'zod';
 import https from 'https';
 import http from 'http';
+import { requireAuth, requireRole } from '../auth/middleware';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { logger } from '../logger';
 
 export const alertConfigRouter = Router();
 
@@ -21,113 +24,140 @@ const createAlertSchema = z.object({
   cooldownMinutes: z.coerce.number().int().min(0).default(60),
 });
 
-// POST /emergency/alerts
-alertConfigRouter.post('/', async (req: Request, res: Response) => {
-  try {
-    const data = createAlertSchema.parse(req.body);
-    const alert = await prismaWrite.alertConfiguration.create({
-      data: {
-        userId: data.userId,
-        name: data.name,
-        contractAddress: data.contractAddress,
-        alertType: data.alertType,
-        conditions: (data.conditions ?? null) as object,
-        channels: data.channels as object,
-        cooldownMinutes: data.cooldownMinutes,
-      },
-    });
-    res.status(201).json(alert);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message ?? String(err) });
-  }
-});
+// POST /emergency/alerts  [privileged]
+alertConfigRouter.post(
+  '/',
+  requireAuth,
+  requireRole('admin'),
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const data = createAlertSchema.parse(req.body);
+      const alert = await prismaWrite.alertConfiguration.create({
+        data: {
+          userId: data.userId,
+          name: data.name,
+          contractAddress: data.contractAddress,
+          alertType: data.alertType,
+          conditions: (data.conditions ?? null) as object,
+          channels: data.channels as object,
+          cooldownMinutes: data.cooldownMinutes,
+        },
+      });
+      res.status(201).json(alert);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message ?? String(err) });
+    }
+  }),
+);
 
 // GET /emergency/alerts
-alertConfigRouter.get('/', async (req: Request, res: Response) => {
-  try {
-    const userId = req.query.userId as string | undefined;
-    const alerts = await prismaRead.alertConfiguration.findMany({
-      where: { ...(userId ? { userId } : {}), isActive: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json({ data: alerts, total: alerts.length });
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
-  }
-});
-
-// PATCH /emergency/alerts/:id
-alertConfigRouter.patch('/:id', async (req: Request, res: Response) => {
-  try {
-    const patch = z
-      .object({
-        name: z.string().optional(),
-        isActive: z.boolean().optional(),
-        conditions: z.record(z.unknown()).optional(),
-        channels: z.array(channelSchema).optional(),
-        cooldownMinutes: z.coerce.number().int().optional(),
-      })
-      .parse(req.body);
-
-    const updated = await prismaWrite.alertConfiguration.update({
-      where: { id: req.params.id },
-      data: {
-        ...(patch.name !== undefined ? { name: patch.name } : {}),
-        ...(patch.isActive !== undefined ? { isActive: patch.isActive } : {}),
-        ...(patch.conditions ? { conditions: patch.conditions as object } : {}),
-        ...(patch.channels ? { channels: patch.channels as object } : {}),
-        ...(patch.cooldownMinutes !== undefined ? { cooldownMinutes: patch.cooldownMinutes } : {}),
-      },
-    });
-    res.json(updated);
-  } catch (err: any) {
-    if (err.code === 'P2025') return res.status(404).json({ error: 'Not found' });
-    res.status(400).json({ error: String(err) });
-  }
-});
-
-// DELETE /emergency/alerts/:id
-alertConfigRouter.delete('/:id', async (req: Request, res: Response) => {
-  try {
-    await prismaWrite.alertConfiguration.update({
-      where: { id: req.params.id },
-      data: { isActive: false },
-    });
-    res.status(204).send();
-  } catch (err: any) {
-    if (err.code === 'P2025') return res.status(404).json({ error: 'Not found' });
-    res.status(500).json({ error: String(err) });
-  }
-});
-
-// POST /emergency/alerts/:id/test
-alertConfigRouter.post('/:id/test', async (req: Request, res: Response) => {
-  try {
-    const alert = await prismaRead.alertConfiguration.findUnique({ where: { id: req.params.id } });
-    if (!alert) return res.status(404).json({ error: 'Not found' });
-
-    const channels = alert.channels as Array<{ type: string; config: Record<string, unknown> }>;
-    const results: Array<{ type: string; success: boolean; error?: string }> = [];
-
-    for (const ch of channels) {
-      try {
-        await deliverAlert(ch, {
-          alertType: alert.alertType,
-          contract: alert.contractAddress ?? 'TEST',
-          message: `Test alert from Emergency Response Platform for alert "${alert.name ?? alert.id}"`,
-          timestamp: new Date().toISOString(),
-        });
-        results.push({ type: ch.type, success: true });
-      } catch (e) {
-        results.push({ type: ch.type, success: false, error: String(e) });
-      }
+alertConfigRouter.get(
+  '/',
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const userId = req.query.userId as string | undefined;
+      const alerts = await prismaRead.alertConfiguration.findMany({
+        where: { ...(userId ? { userId } : {}), isActive: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      res.json({ data: alerts, total: alerts.length });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
     }
+  }),
+);
 
-    res.json({ results });
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
-  }
-});
+// PATCH /emergency/alerts/:id  [privileged]
+alertConfigRouter.patch(
+  '/:id',
+  requireAuth,
+  requireRole('admin'),
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const patch = z
+        .object({
+          name: z.string().optional(),
+          isActive: z.boolean().optional(),
+          conditions: z.record(z.unknown()).optional(),
+          channels: z.array(channelSchema).optional(),
+          cooldownMinutes: z.coerce.number().int().optional(),
+        })
+        .parse(req.body);
+
+      const updated = await prismaWrite.alertConfiguration.update({
+        where: { id: req.params.id },
+        data: {
+          ...(patch.name !== undefined ? { name: patch.name } : {}),
+          ...(patch.isActive !== undefined ? { isActive: patch.isActive } : {}),
+          ...(patch.conditions ? { conditions: patch.conditions as object } : {}),
+          ...(patch.channels ? { channels: patch.channels as object } : {}),
+          ...(patch.cooldownMinutes !== undefined
+            ? { cooldownMinutes: patch.cooldownMinutes }
+            : {}),
+        },
+      });
+      res.json(updated);
+    } catch (err: any) {
+      if (err.code === 'P2025') return res.status(404).json({ error: 'Not found' });
+      res.status(400).json({ error: String(err) });
+    }
+  }),
+);
+
+// DELETE /emergency/alerts/:id  [privileged]
+alertConfigRouter.delete(
+  '/:id',
+  requireAuth,
+  requireRole('admin'),
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      await prismaWrite.alertConfiguration.update({
+        where: { id: req.params.id },
+        data: { isActive: false },
+      });
+      res.status(204).send();
+    } catch (err: any) {
+      if (err.code === 'P2025') return res.status(404).json({ error: 'Not found' });
+      res.status(500).json({ error: String(err) });
+    }
+  }),
+);
+
+// POST /emergency/alerts/:id/test  [privileged]
+alertConfigRouter.post(
+  '/:id/test',
+  requireAuth,
+  requireRole('admin'),
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const alert = await prismaRead.alertConfiguration.findUnique({
+        where: { id: req.params.id },
+      });
+      if (!alert) return res.status(404).json({ error: 'Not found' });
+
+      const channels = alert.channels as Array<{ type: string; config: Record<string, unknown> }>;
+      const results: Array<{ type: string; success: boolean; error?: string }> = [];
+
+      for (const ch of channels) {
+        try {
+          await deliverAlert(ch, {
+            alertType: alert.alertType,
+            contract: alert.contractAddress ?? 'TEST',
+            message: `Test alert from Emergency Response Platform for alert "${alert.name ?? alert.id}"`,
+            timestamp: new Date().toISOString(),
+          });
+          results.push({ type: ch.type, success: true });
+        } catch (e) {
+          results.push({ type: ch.type, success: false, error: String(e) });
+        }
+      }
+
+      res.json({ results });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  }),
+);
 
 /** Fire alerts for a pause event — called by the emergency indexer */
 export async function fireAlertsForPause(
@@ -210,7 +240,7 @@ async function deliverAlert(
     case 'telegram':
     case 'pagerduty':
       // Log only — external integrations require API keys not available in this env
-      console.info(`[Alert] ${channel.type} delivery: ${JSON.stringify(payload)}`);
+      logger.info(`[Alert] ${channel.type} delivery: ${JSON.stringify(payload)}`);
       break;
   }
 }

@@ -17,6 +17,7 @@
 import { prismaWrite as prisma } from '../db';
 import { processLedgerRange } from './ledgerProcessor';
 import { config } from '../config';
+import { logger } from '../logger';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -107,10 +108,10 @@ async function backfill(sequences: number[]): Promise<void> {
 
   for (const [start, end] of ranges) {
     try {
-      console.log(`[repair] backfilling ledgers ${start}–${end}`);
+      logger.info(`[repair] backfilling ledgers ${start}–${end}`);
       await processLedgerRange(start, end);
     } catch (err) {
-      console.error(`[repair] backfill failed for ${start}–${end}:`, err);
+      logger.error(`[repair] backfill failed for ${start}–${end}:`, err);
     }
   }
 }
@@ -125,41 +126,58 @@ async function backfill(sequences: number[]): Promise<void> {
  *
  * Returns counts of sequences repaired.
  */
-export async function runRepairSweep(): Promise<{ hardGaps: number; softGaps: number }> {
-  // Bounds: use the min/max sequence actually present in the Ledger table
-  const bounds = await prisma.ledger.aggregate({
-    _min: { sequence: true },
-    _max: { sequence: true },
-  });
+export interface RepairSweepOptions {
+  dryRun?: boolean;
+  fromSeq?: number;
+  toSeq?: number;
+}
 
-  const minSeq = bounds._min.sequence;
-  const maxSeq = bounds._max.sequence;
+export async function runRepairSweep(
+  opts?: RepairSweepOptions,
+): Promise<{ hardGaps: number; softGaps: number }> {
+  const dryRun = opts?.dryRun ?? false;
+
+  let minSeq: number | null = opts?.fromSeq ?? null;
+  let maxSeq: number | null = opts?.toSeq ?? null;
 
   if (minSeq === null || maxSeq === null) {
-    console.log('[repair] No ledgers indexed yet — nothing to sweep.');
+    const bounds = await prisma.ledger.aggregate({
+      _min: { sequence: true },
+      _max: { sequence: true },
+    });
+    if (minSeq === null) minSeq = bounds._min.sequence;
+    if (maxSeq === null) maxSeq = bounds._max.sequence;
+  }
+
+  if (minSeq === null || maxSeq === null) {
+    logger.info('[repair] No ledgers indexed yet — nothing to sweep.');
     return { hardGaps: 0, softGaps: 0 };
   }
 
-  // Cap the sweep window to avoid scanning an unbounded range on first run
-  const sweepMax = Math.min(maxSeq, minSeq + MAX_EMPTY_BATCH * 10);
+  // Cap the sweep window unless an explicit upper bound was supplied
+  const sweepMax =
+    opts?.toSeq !== undefined ? maxSeq : Math.min(maxSeq, minSeq + MAX_EMPTY_BATCH * 10);
 
-  console.log(`[repair] Sweeping ledgers ${minSeq}–${sweepMax}`);
+  logger.info(`[repair] Sweeping ledgers ${minSeq}–${sweepMax}${dryRun ? ' (dry-run)' : ''}`);
 
   // 1. Hard gaps
   const missing = await findMissingSequences(minSeq, sweepMax, REPAIR_CHUNK);
   if (missing.length > 0) {
-    console.log(`[repair] Found ${missing.length} missing sequence(s)`);
-    await backfill(missing);
+    logger.info(`[repair] Found ${missing.length} missing sequence(s)`);
+    if (!dryRun) await backfill(missing);
   }
 
   // 2. Soft gaps
   const empty = await findEmptyLedgers(REPAIR_CHUNK);
   if (empty.length > 0) {
-    console.log(`[repair] Found ${empty.length} empty ledger(s)`);
-    await backfill(empty);
+    logger.info(`[repair] Found ${empty.length} empty ledger(s)`);
+    if (!dryRun) await backfill(empty);
   }
 
-  console.log(`[repair] Sweep complete — hard: ${missing.length}, soft: ${empty.length}`);
+  logger.info(
+    `[repair] Sweep complete — hard: ${missing.length}, soft: ${empty.length}` +
+      (dryRun ? ' (no changes written — dry-run)' : ''),
+  );
   return { hardGaps: missing.length, softGaps: empty.length };
 }
 
@@ -170,7 +188,7 @@ export async function runRepairSweep(): Promise<{ hardGaps: number; softGaps: nu
  * Designed to run as a separate process alongside the live indexer.
  */
 export async function startRepairLoop(): Promise<void> {
-  console.log(
+  logger.info(
     `[repair] Starting background repair loop ` +
       `(interval=${SWEEP_INTERVAL_MS}ms, chunk=${REPAIR_CHUNK}, network=${config.stellarNetwork})`,
   );
@@ -180,7 +198,7 @@ export async function startRepairLoop(): Promise<void> {
     try {
       await runRepairSweep();
     } catch (err) {
-      console.error('[repair] Sweep error:', err);
+      logger.error('[repair] Sweep error:', err);
     }
     await sleep(SWEEP_INTERVAL_MS);
   }

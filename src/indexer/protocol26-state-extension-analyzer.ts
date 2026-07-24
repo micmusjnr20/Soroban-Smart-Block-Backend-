@@ -12,6 +12,7 @@
 
 import { xdr, scValToNative } from '@stellar/stellar-sdk';
 import { prismaRead as prisma } from '../db';
+import { logger } from '../logger';
 
 export interface StateExtensionParams {
   extend_to?: bigint;
@@ -315,25 +316,45 @@ export async function analyzeStateExtension(
   ledgerSequence: number,
   ledgerCloseTime: Date,
 ): Promise<StateExtensionAnalysis | null> {
-  const params = extractStateExtensionParams(functionName, rawArgs);
-  if (!params) return null;
+  const startMs = Date.now();
+  try {
+    const params = extractStateExtensionParams(functionName, rawArgs);
+    if (!params) return null;
 
-  const extensionRange = analyzeExtensionRange(params);
-  const clampingAnalysis = analyzeClampingBehavior(params);
-  const equityMetrics = calculateEquityMetrics(params, ledgerSequence);
-  const historicalContext = await analyzeHistoricalContext(contractAddress, ledgerSequence);
+    const extensionRange = analyzeExtensionRange(params);
+    const clampingAnalysis = analyzeClampingBehavior(params);
+    const equityMetrics = calculateEquityMetrics(params, ledgerSequence);
+    const historicalContext = await analyzeHistoricalContext(contractAddress, ledgerSequence);
 
-  return {
-    contractAddress,
-    transactionHash,
-    ledgerSequence,
-    ledgerCloseTime,
-    params,
-    extensionRange,
-    clampingAnalysis,
-    equityMetrics,
-    historicalContext,
-  };
+    const durationMs = Date.now() - startMs;
+    if (durationMs > 500) {
+      logger.warn(
+        '[analyzeStateExtension] slow execution: %dms for %s',
+        durationMs,
+        contractAddress,
+      );
+    }
+
+    return {
+      contractAddress,
+      transactionHash,
+      ledgerSequence,
+      ledgerCloseTime,
+      params,
+      extensionRange,
+      clampingAnalysis,
+      equityMetrics,
+      historicalContext,
+    };
+  } catch (error) {
+    logger.error(
+      '[analyzeStateExtension] error after %dms for %s:',
+      Date.now() - startMs,
+      contractAddress,
+      error,
+    );
+    return null;
+  }
 }
 
 /**
@@ -376,7 +397,7 @@ export async function storeStateExtensionAnalysis(analysis: StateExtensionAnalys
       },
     });
   } catch (error) {
-    console.error('Failed to store state extension analysis:', error);
+    logger.error('Failed to store state extension analysis:', error);
   }
 }
 
@@ -461,7 +482,7 @@ export async function generateStateExtensionMetrics(
       equityScoreDistribution: distribution,
     };
   } catch (error) {
-    console.error('Failed to generate state extension metrics:', error);
+    logger.error('Failed to generate state extension metrics:', error);
     return {
       totalExtensionCalls: 0,
       contractsUsingExtension: 0,
@@ -556,7 +577,7 @@ export async function identifyProblematicContracts(
 
     return results.sort((a, b) => b.violationCount - a.violationCount);
   } catch (error) {
-    console.error('Failed to identify problematic contracts:', error);
+    logger.error('Failed to identify problematic contracts:', error);
     return [];
   }
 }

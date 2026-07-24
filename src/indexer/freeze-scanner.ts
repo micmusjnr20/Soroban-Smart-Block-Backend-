@@ -10,6 +10,7 @@
  */
 import { xdr } from '@stellar/stellar-sdk';
 import { prismaWrite as prisma } from '../db';
+import { logger } from '../logger';
 
 // ── In-memory cache of active frozen keys ────────────────────────────────────
 
@@ -106,7 +107,8 @@ export async function recordFreezeViolation(
   frozenKeys: string[],
 ): Promise<void> {
   const numKeys = frozenKeys.length;
-  const severity = numKeys > 10 ? 'critical' : numKeys > 5 ? 'high' : numKeys > 2 ? 'medium' : 'low';
+  const severity =
+    numKeys > 10 ? 'critical' : numKeys > 5 ? 'high' : numKeys > 2 ? 'medium' : 'low';
 
   await Promise.all([
     prisma.freezeViolation.upsert({
@@ -114,7 +116,7 @@ export async function recordFreezeViolation(
       update: { frozenKeys, severity },
       create: {
         transactionHash,
-        contractAddress,
+        contractAddress: contractAddress ?? '',
         ledgerSequence,
         ledgerCloseTime,
         frozenKeys,
@@ -124,7 +126,7 @@ export async function recordFreezeViolation(
     }),
     prisma.transaction.updateMany({
       where: { hash: transactionHash },
-      data: { freezeViolation: true },
+      data: { status: 'freeze_flagged' },
     }),
   ]);
 
@@ -140,10 +142,10 @@ export async function recordFreezeViolation(
           contractAddress,
           frozenKeys,
           ledgerSequence,
-        })
-      }).catch(err => console.error('[freeze-scanner] Failed to send alert webhook', err));
+        }),
+      }).catch((err) => logger.error('[freeze-scanner] Failed to send alert webhook', err));
     } else {
-      console.warn(`[freeze-scanner] CRITICAL VIOLATION DETECTED for tx ${transactionHash}`);
+      logger.warn(`[freeze-scanner] CRITICAL VIOLATION DETECTED for tx ${transactionHash}`);
     }
   }
 }
@@ -164,10 +166,17 @@ export async function registerFrozenKey(
   await prisma.frozenLedgerKey.upsert({
     where: { ledgerKey },
     update: { active: true, reason: reason ?? null },
-    create: { ledgerKey, contractAddress, frozenAtLedger, frozenAtTime, reason: reason ?? null },
+    create: {
+      ledgerKey,
+      contractAddress: contractAddress ?? '',
+      frozenAtLedger,
+      frozenAtTime,
+      reason: reason ?? null,
+      active: true,
+    },
   });
   invalidateFreezeCache();
-  console.log(
+  logger.info(
     `[freeze-scanner] Registered frozen key for contract ${contractAddress ?? 'unknown'} at ledger ${frozenAtLedger}`,
   );
 }

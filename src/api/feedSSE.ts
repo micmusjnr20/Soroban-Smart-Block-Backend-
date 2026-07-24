@@ -2,7 +2,8 @@ import { Router, Response } from 'express';
 import { ChannelManager } from '../feed/channelManager';
 import { SubscriptionManager } from '../feed/subscriptionManager';
 import { feedOrchestrator } from '../feed/orchestrator';
-import { prisma } from '../db';
+import { prismaRead as prisma } from '../db';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -62,26 +63,23 @@ router.get('/', (req, res) => {
   };
 
   connections.set(connectionId, connection);
-  console.log(`SSE connected: ${connectionId}, channels: ${channels.join(', ')}`);
-
-  // Handle client disconnect
-  req.on('close', () => {
-    connections.delete(connectionId);
-    console.log(`SSE disconnected: ${connectionId}`);
-  });
+  logger.info(`SSE connected: ${connectionId}, channels: ${channels.join(', ')}`);
 
   // Keep connection alive
   const heartbeat = setInterval(() => {
-    if (connections.has(connectionId)) {
-      sendSSE(res, 'heartbeat', { timestamp: new Date().toISOString() });
-    } else {
-      clearInterval(heartbeat);
-    }
+    sendSSE(res, 'heartbeat', { timestamp: new Date().toISOString() });
   }, 30000); // 30 seconds
+
+  // Handle client disconnect
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    connections.delete(connectionId);
+    logger.info(`SSE disconnected: ${connectionId}`);
+  });
 
   // Handle reconnection with replay
   if (connection.lastEventId) {
-    replayMissedEvents(connection).catch(console.error);
+    replayMissedEvents(connection).catch((err) => logger.error('replayMissedEvents error:', err));
   }
 });
 
@@ -125,7 +123,7 @@ function broadcastToSSE(message: any) {
         message.sequence?.toString(),
       );
     } catch (error) {
-      console.error(`Failed to send SSE to ${connection.id}:`, error);
+      logger.error(`Failed to send SSE to ${connection.id}:`, error);
       connections.delete(connection.id);
     }
   }
@@ -170,7 +168,7 @@ async function replayMissedEvents(connection: SSEConnection) {
       });
     }
   } catch (error) {
-    console.error(`Failed to replay events for ${connection.id}:`, error);
+    logger.error(`Failed to replay events for ${connection.id}:`, error);
     sendSSE(connection.response, 'error', {
       message: 'Failed to replay missed events',
       timestamp: new Date().toISOString(),

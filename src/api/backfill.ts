@@ -1,7 +1,9 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { prisma } from '../db';
+import { prismaRead as prisma } from '../db';
 import { ChannelManager } from '../feed/channelManager';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -15,152 +17,84 @@ const backfillSchema = z.object({
   callbackUrl: z.string().url().optional(),
 });
 
-// POST /api/v1/feed/backfill - Request historical data
-router.post('/', async (req, res) => {
-  try {
-    const validatedData = backfillSchema.parse(req.body);
+// Operator-only guard for write mutations — mirrors the adminAuth pattern in freeze.ts
+const operatorAuth = (req: Request, res: Response, next: NextFunction) => {
+  const token = req.headers['x-operator-token'] || req.headers['x-admin-token'];
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized: operator token required' });
+  }
+  req.actor = typeof token === 'string' ? token : String(token);
+  next();
+};
 
-    // Validate channel exists
-    if (!ChannelManager.isValidChannel(validatedData.channelName)) {
-      return res.status(400).json({ error: 'Invalid channel name' });
-    }
+// POST /api/v1/feed/backfill - Request historical data (operator-only)
+router.post(
+  '/',
+  operatorAuth,
+  asyncHandler(async (req, res) => {
+    try {
+      const validatedData = backfillSchema.parse(req.body);
 
-    // Validate date range
-    const startTime = new Date(validatedData.startTime);
-    const endTime = new Date(validatedData.endTime);
+      // Validate channel exists
+      if (!ChannelManager.isValidChannel(validatedData.channelName)) {
+        return res.status(400).json({ error: 'Invalid channel name' });
+      }
 
-    if (startTime >= endTime) {
-      return res.status(400).json({ error: 'Start time must be before end time' });
-    }
+      // Validate date range
+      const startTime = new Date(validatedData.startTime);
+      const endTime = new Date(validatedData.endTime);
 
-    // Check if range is within limits (max 90 days)
-    const maxDays = 90;
-    const diffDays = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24);
+      if (startTime >= endTime) {
+        return res.status(400).json({ error: 'Start time must be before end time' });
+      }
 
-    if (diffDays > maxDays) {
-      return res.status(400).json({
-        error: `Date range exceeds maximum of ${maxDays} days`,
+      // Check if range is within limits (max 90 days)
+      const maxDays = 90;
+      const diffDays = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (diffDays > maxDays) {
+        return res.status(400).json({
+          error: `Date range exceeds maximum of ${maxDays} days`,
+        });
+      }
+
+      const userId = req.headers['x-user-id'] as string;
+
+      const backfillRequest = await prisma.backfillRequest.create({
+        data: {
+          userId,
+          channelName: validatedData.channelName,
+          startTime,
+          endTime,
+          format: validatedData.format,
+          filters: validatedData.filters,
+          status: 'pending',
+        },
       });
+
+      // Queue backfill job (in real implementation, this would use a job queue)
+      processBackfillRequest(backfillRequest.id).catch((err) =>
+        logger.error('processBackfillRequest error:', err),
+      );
+
+      res.status(202).json({
+        requestId: backfillRequest.id,
+        status: backfillRequest.status,
+        estimatedCompletionTime: getEstimatedCompletionTime(validatedData.channelName, diffDays),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+      }
+      logger.error('Failed to create backfill request:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
-
-    const userId = req.headers['x-user-id'] as string;
-
-    const backfillRequest = await prisma.backfillRequest.create({
-      data: {
-        userId,
-        channelName: validatedData.channelName,
-        startTime,
-        endTime,
-        format: validatedData.format,
-        filters: validatedData.filters,
-        status: 'pending',
-      },
-    });
-
-    // Queue backfill job (in real implementation, this would use a job queue)
-    processBackfillRequest(backfillRequest.id).catch(console.error);
-
-    res.status(202).json({
-      requestId: backfillRequest.id,
-      status: backfillRequest.status,
-      estimatedCompletionTime: getEstimatedCompletionTime(validatedData.channelName, diffDays),
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid request data', details: error.errors });
-    }
-    console.error('Failed to create backfill request:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET /api/v1/feed/backfill/:requestId - Check backfill status and download URL
-router.get('/:requestId', async (req, res) => {
-  try {
-    const request = await prisma.backfillRequest.findUnique({
-      where: { id: req.params.requestId },
-    });
-
-    if (!request) {
-      return res.status(404).json({ error: 'Backfill request not found' });
-    }
-
-    const response: any = {
-      requestId: request.id,
-      channelName: request.channelName,
-      startTime: request.startTime,
-      endTime: request.endTime,
-      format: request.format,
-      status: request.status,
-      progress: request.progress,
-      createdAt: request.createdAt,
-    };
-
-    if (request.status === 'completed') {
-      response.downloadUrl = request.fileUrl;
-      response.fileSizeBytes = request.fileSizeBytes;
-      response.recordCount = request.recordCount;
-      response.completedAt = request.completedAt;
-    } else if (request.status === 'failed') {
-      response.errorMessage = request.errorMessage;
-    }
-
-    res.json(response);
-  } catch (error) {
-    console.error('Failed to fetch backfill request:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET /api/v1/feed/backfill - List user's backfill requests
-router.get('/', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'] as string;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-    const offset = (page - 1) * limit;
-
-    const requests = await prisma.backfillRequest.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      skip: offset,
-      take: limit,
-      select: {
-        id: true,
-        channelName: true,
-        startTime: true,
-        endTime: true,
-        format: true,
-        status: true,
-        progress: true,
-        fileSizeBytes: true,
-        recordCount: true,
-        createdAt: true,
-        completedAt: true,
-      },
-    });
-
-    const total = await prisma.backfillRequest.count({
-      where: { userId },
-    });
-
-    res.json({
-      requests,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    console.error('Failed to fetch backfill requests:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  }),
+);
 
 // GET /api/v1/feed/backfill/limits - Get backfill limits
-router.get('/limits', (req, res) => {
+// Must be registered before /:requestId to prevent the param route from shadowing it
+router.get('/limits', (_req, res) => {
   res.json({
     maxRangeDays: 90,
     maxFileSizeBytes: 1024 * 1024 * 1024, // 1GB
@@ -170,6 +104,97 @@ router.get('/limits', (req, res) => {
     supportedCompression: ['none', 'gzip', 'brotli'],
   });
 });
+
+// GET /api/v1/feed/backfill/:requestId - Check backfill status and download URL
+router.get(
+  '/:requestId',
+  asyncHandler(async (req, res) => {
+    try {
+      const request = await prisma.backfillRequest.findUnique({
+        where: { id: req.params.requestId },
+      });
+
+      if (!request) {
+        return res.status(404).json({ error: 'Backfill request not found' });
+      }
+
+      const response: any = {
+        requestId: request.id,
+        channelName: request.channelName,
+        startTime: request.startTime,
+        endTime: request.endTime,
+        format: request.format,
+        status: request.status,
+        progress: request.progress,
+        createdAt: request.createdAt,
+      };
+
+      if (request.status === 'completed') {
+        response.downloadUrl = request.fileUrl;
+        response.fileSizeBytes = request.fileSizeBytes;
+        response.recordCount = request.recordCount;
+        response.completedAt = request.completedAt;
+      } else if (request.status === 'failed') {
+        response.errorMessage = request.errorMessage;
+      }
+
+      res.json(response);
+    } catch (error) {
+      logger.error('Failed to fetch backfill request:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }),
+);
+
+// GET /api/v1/feed/backfill - List user's backfill requests
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    try {
+      const userId = req.headers['x-user-id'] as string;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const offset = (page - 1) * limit;
+
+      const requests = await prisma.backfillRequest.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+        select: {
+          id: true,
+          channelName: true,
+          startTime: true,
+          endTime: true,
+          format: true,
+          status: true,
+          progress: true,
+          fileSizeBytes: true,
+          recordCount: true,
+          createdAt: true,
+          completedAt: true,
+        },
+      });
+
+      const total = await prisma.backfillRequest.count({
+        where: { userId },
+      });
+
+      res.json({
+        requests,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to fetch backfill requests:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }),
+);
 
 async function processBackfillRequest(requestId: string) {
   try {
@@ -231,7 +256,7 @@ async function processBackfillRequest(requestId: string) {
       // TODO: Send completion callback
     }
   } catch (error) {
-    console.error(`Backfill processing failed for ${requestId}:`, error);
+    logger.error(`Backfill processing failed for ${requestId}:`, error);
 
     await prisma.backfillRequest.update({
       where: { id: requestId },

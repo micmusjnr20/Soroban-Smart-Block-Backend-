@@ -27,9 +27,23 @@ const options: swaggerJsdoc.Options = {
       { name: 'Network', description: 'Network protocol status' },
       { name: 'Token Metadata', description: 'Token metadata resolution' },
       { name: 'Protocol', description: 'Protocol version and reconciliation' },
+      { name: 'Analytics', description: 'Gas cost snapshots and protocol economic analytics' },
       { name: 'i18n', description: 'Internationalization translation management' },
-      { name: 'Threat Intelligence', description: 'Advisories, review workflow, subscriptions, webhooks, RSS/JSON feeds, analytics, and source management' },
-      { name: 'Sandbox', description: 'In-memory Soroban sandbox for developing and testing smart contracts locally. Live VM state is kept in memory; sessions persist to the database.' },
+      {
+        name: 'Threat Intelligence',
+        description:
+          'Advisories, review workflow, subscriptions, webhooks, RSS/JSON feeds, analytics, and source management',
+      },
+      {
+        name: 'Sandbox',
+        description:
+          'In-memory Soroban sandbox for developing and testing smart contracts locally. Live VM state is kept in memory; sessions persist to the database.',
+      },
+      {
+        name: 'Reputation',
+        description:
+          'Address reputation scoring, Sybil detection, attestations, verifiable credentials, cross-chain identity linking, trust networks, governance, and reputation NFTs.',
+      },
     ],
     components: {
       securitySchemes: {
@@ -1436,18 +1450,48 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2advis001' },
             title: { type: 'string', example: 'Reentrancy in transfer hook' },
-            description: { type: 'string', nullable: true, example: 'A reentrancy vulnerability allows double-spend via malicious token hook.' },
-            severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'info'], example: 'high' },
+            description: {
+              type: 'string',
+              nullable: true,
+              example: 'A reentrancy vulnerability allows double-spend via malicious token hook.',
+            },
+            severity: {
+              type: 'string',
+              enum: ['critical', 'high', 'medium', 'low', 'info'],
+              example: 'high',
+            },
             cvssScore: { type: 'number', nullable: true, example: 8.1 },
             cveId: { type: 'string', nullable: true, example: 'CVE-2026-1234' },
             ghsaId: { type: 'string', nullable: true, example: null },
-            affectedContracts: { type: 'array', items: { type: 'string' }, example: ['CALLD5GHXR4QSTKHSWQEK4UVMHM4QHU4KZ5G4SBKWY7C7TXKZ45RJ4M5'] },
+            affectedContracts: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['CALLD5GHXR4QSTKHSWQEK4UVMHM4QHU4KZ5G4SBKWY7C7TXKZ45RJ4M5'],
+            },
             affectedChains: { type: 'array', items: { type: 'string' }, example: ['stellar'] },
-            mitigations: { type: 'string', nullable: true, description: 'Stored as a serialised value (schema column is String?)', example: null },
-            tags: { type: 'array', items: { type: 'string' }, example: ['reentrancy', 'community'] },
+            mitigations: {
+              type: 'string',
+              nullable: true,
+              description: 'Stored as a serialised value (schema column is String?)',
+              example: null,
+            },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['reentrancy', 'community'],
+            },
             sourceId: { type: 'string', nullable: true, example: 'clz9q1x4t0000s6h2vsource1' },
-            status: { type: 'string', enum: ['open', 'under_review', 'resolved', 'disputed'], example: 'open' },
-            publishedAt: { type: 'string', format: 'date-time', nullable: true, example: '2026-06-19T07:24:26.000Z' },
+            status: {
+              type: 'string',
+              enum: ['open', 'under_review', 'resolved', 'disputed'],
+              example: 'open',
+            },
+            publishedAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              example: '2026-06-19T07:24:26.000Z',
+            },
             externalUrl: { type: 'string', nullable: true, example: null },
             createdAt: { type: 'string', format: 'date-time', example: '2026-06-19T07:24:26.000Z' },
             updatedAt: { type: 'string', format: 'date-time', example: '2026-06-19T07:24:27.000Z' },
@@ -1459,8 +1503,18 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2review001' },
             advisoryId: { type: 'string', example: 'clz9q1x4t0000s6h2advis001' },
-            role: { type: 'string', nullable: true, enum: ['analyst', 'admin'], example: 'analyst' },
-            decision: { type: 'string', nullable: true, enum: ['approve', 'reject', 'escalate'], example: 'approve' },
+            role: {
+              type: 'string',
+              nullable: true,
+              enum: ['analyst', 'admin'],
+              example: 'analyst',
+            },
+            decision: {
+              type: 'string',
+              nullable: true,
+              enum: ['approve', 'reject', 'escalate'],
+              example: 'approve',
+            },
             notes: { type: 'string', nullable: true, example: 'Confirmed exploitable on testnet.' },
             reviewerKey: { type: 'string', example: 'sk_live_abc123' },
             createdAt: { type: 'string', format: 'date-time', example: '2026-06-19T07:24:26.000Z' },
@@ -1472,7 +1526,11 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2comment01' },
             advisoryId: { type: 'string', example: 'clz9q1x4t0000s6h2advis001' },
-            authorKey: { type: 'string', description: 'X-API-Key header value, or "anonymous" if absent', example: 'anonymous' },
+            authorKey: {
+              type: 'string',
+              description: 'X-API-Key header value, or "anonymous" if absent',
+              example: 'anonymous',
+            },
             body: { type: 'string', example: 'Reproduced on testnet ledger 3168075.' },
             createdAt: { type: 'string', format: 'date-time', example: '2026-06-19T07:24:26.000Z' },
           },
@@ -1482,15 +1540,28 @@ const options: swaggerJsdoc.Options = {
           type: 'object',
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2tipsub01' },
-            channel: { type: 'string', enum: ['email', 'slack', 'discord', 'telegram'], example: 'slack' },
-            target: { type: 'string', description: 'Channel-specific destination (email address, webhook URL, user id, etc.)', example: '#security-alerts' },
+            channel: {
+              type: 'string',
+              enum: ['email', 'slack', 'discord', 'telegram'],
+              example: 'slack',
+            },
+            target: {
+              type: 'string',
+              description:
+                'Channel-specific destination (email address, webhook URL, user id, etc.)',
+              example: '#security-alerts',
+            },
             active: { type: 'boolean', example: true },
             filters: {
               type: 'object',
               nullable: true,
               description: 'Optional severity/tag filters',
               properties: {
-                severity: { type: 'array', items: { type: 'string' }, example: ['critical', 'high'] },
+                severity: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['critical', 'high'],
+                },
                 tags: { type: 'array', items: { type: 'string' }, example: ['reentrancy'] },
               },
               example: { severity: ['critical', 'high'] },
@@ -1504,10 +1575,27 @@ const options: swaggerJsdoc.Options = {
           type: 'object',
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2vsource1' },
-            name: { type: 'string', description: 'Unique source identifier, e.g. NVD_CVE, GHSA, COMMUNITY', example: 'NVD_CVE' },
-            sourceType: { type: 'string', description: 'Feed type: cve | ghsa | manual | onchain', example: 'cve' },
-            feedUrl: { type: 'string', nullable: true, example: 'https://services.nvd.nist.gov/rest/json/cves/2.0' },
-            lastFetchAt: { type: 'string', format: 'date-time', nullable: true, example: '2026-06-19T07:24:26.000Z' },
+            name: {
+              type: 'string',
+              description: 'Unique source identifier, e.g. NVD_CVE, GHSA, COMMUNITY',
+              example: 'NVD_CVE',
+            },
+            sourceType: {
+              type: 'string',
+              description: 'Feed type: cve | ghsa | manual | onchain',
+              example: 'cve',
+            },
+            feedUrl: {
+              type: 'string',
+              nullable: true,
+              example: 'https://services.nvd.nist.gov/rest/json/cves/2.0',
+            },
+            lastFetchAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              example: '2026-06-19T07:24:26.000Z',
+            },
             active: { type: 'boolean', example: true },
             createdAt: { type: 'string', format: 'date-time', example: '2026-06-19T07:24:26.000Z' },
             updatedAt: { type: 'string', format: 'date-time', example: '2026-06-19T07:24:27.000Z' },
@@ -1537,13 +1625,28 @@ const options: swaggerJsdoc.Options = {
           type: 'object',
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2sbox0001' },
-            status: { type: 'string', description: 'active | paused | destroyed', example: 'active' },
+            status: {
+              type: 'string',
+              description: 'active | paused | destroyed',
+              example: 'active',
+            },
             ledgerSequence: { type: 'integer', example: 1 },
-            ledgerTimestamp: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
-            networkPassphrase: { type: 'string', example: 'Public Global Stellar Network ; September 2015' },
+            ledgerTimestamp: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-06-23T00:00:00.000Z',
+            },
+            networkPassphrase: {
+              type: 'string',
+              example: 'Public Global Stellar Network ; September 2015',
+            },
             expiresAt: { type: 'string', format: 'date-time', example: '2026-06-23T04:00:00.000Z' },
             createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
-            lastAccessed: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+            lastAccessed: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-06-23T00:00:00.000Z',
+            },
             accountCount: { type: 'integer', example: 20 },
             contractCount: { type: 'integer', example: 0 },
             callCount: { type: 'integer', example: 0 },
@@ -1556,12 +1659,44 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: { type: 'string', example: 'sep41-token' },
             name: { type: 'string', example: 'SEP-41 Token' },
-            description: { type: 'string', example: 'Standard token with mint, burn, pause, and transfer flows.' },
-            category: { type: 'string', description: 'token | dex | nft | wallet | governance | auction', example: 'token' },
-            wasmBase64: { type: 'string', description: 'Base64-encoded Wasm bytecode', example: 'AGFzbQEAAAA=' },
-            abi: { type: 'object', description: 'Function list for the template', example: { functions: [{ name: 'mint', inputs: [{ name: 'to', type: 'address' }, { name: 'amount', type: 'i128' }] }] } },
-            defaultArgs: { type: 'object', description: 'Default constructor arguments', example: { decimals: 7, name: 'Sandbox Token', symbol: 'SBX' } },
-            deploymentGuide: { type: 'string', example: 'Deploy and call initialize, then mint and transfer.' },
+            description: {
+              type: 'string',
+              example: 'Standard token with mint, burn, pause, and transfer flows.',
+            },
+            category: {
+              type: 'string',
+              description: 'token | dex | nft | wallet | governance | auction',
+              example: 'token',
+            },
+            wasmBase64: {
+              type: 'string',
+              description: 'Base64-encoded Wasm bytecode',
+              example: 'AGFzbQEAAAA=',
+            },
+            abi: {
+              type: 'object',
+              description: 'Function list for the template',
+              example: {
+                functions: [
+                  {
+                    name: 'mint',
+                    inputs: [
+                      { name: 'to', type: 'address' },
+                      { name: 'amount', type: 'i128' },
+                    ],
+                  },
+                ],
+              },
+            },
+            defaultArgs: {
+              type: 'object',
+              description: 'Default constructor arguments',
+              example: { decimals: 7, name: 'Sandbox Token', symbol: 'SBX' },
+            },
+            deploymentGuide: {
+              type: 'string',
+              example: 'Deploy and call initialize, then mint and transfer.',
+            },
             version: { type: 'string', example: '1.0.0' },
             author: { type: 'string', example: 'Copilot' },
           },
@@ -1572,7 +1707,11 @@ const options: swaggerJsdoc.Options = {
           properties: {
             templateId: { type: 'string', example: 'sep41-token' },
             category: { type: 'string', example: 'token' },
-            parameters: { type: 'object', description: 'Default constructor arguments', example: { decimals: 7 } },
+            parameters: {
+              type: 'object',
+              description: 'Default constructor arguments',
+              example: { decimals: 7 },
+            },
             abi: { type: 'object', example: { functions: [] } },
             deploymentGuide: { type: 'string', example: 'Deploy and call initialize, then mint.' },
           },
@@ -1581,9 +1720,16 @@ const options: swaggerJsdoc.Options = {
         SandboxAccount: {
           type: 'object',
           properties: {
-            publicKey: { type: 'string', example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI' },
+            publicKey: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
             label: { type: 'string', nullable: true, example: 'deployer' },
-            balance: { type: 'string', description: 'Decimal balance in base units', example: '10000' },
+            balance: {
+              type: 'string',
+              description: 'Decimal balance in base units',
+              example: '10000',
+            },
             sequenceNumber: { type: 'integer', example: 0 },
             isPreFunded: { type: 'boolean', example: true },
           },
@@ -1592,17 +1738,34 @@ const options: swaggerJsdoc.Options = {
         SandboxContract: {
           type: 'object',
           properties: {
-            contractId: { type: 'string', example: 'CALLD5GHXR4QSTKHSWQEK4UVMHM4QHU4KZ5G4SBKWY7C7TXKZ45RJ4M5' },
+            contractId: {
+              type: 'string',
+              example: 'CALLD5GHXR4QSTKHSWQEK4UVMHM4QHU4KZ5G4SBKWY7C7TXKZ45RJ4M5',
+            },
             name: { type: 'string', nullable: true, example: 'MyToken' },
-            wasmHash: { type: 'string', example: 'e5f40312233445566778899aabbccddeeff00112233445566778899aabbccddee' },
-            deployerAccount: { type: 'string', example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI' },
+            wasmHash: {
+              type: 'string',
+              example: 'e5f40312233445566778899aabbccddeeff00112233445566778899aabbccddee',
+            },
+            deployerAccount: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
             sourceContract: { type: 'string', nullable: true, example: null },
             templateId: { type: 'string', nullable: true, example: 'sep41-token' },
-            deployedAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+            deployedAt: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-06-23T00:00:00.000Z',
+            },
             lastCalledAt: { type: 'string', format: 'date-time', nullable: true, example: null },
             totalCalls: { type: 'integer', example: 0 },
             abi: { type: 'object', example: { functions: [] } },
-            state: { type: 'object', description: 'Current contract storage state', example: { totalSupply: '0', balances: {} } },
+            state: {
+              type: 'object',
+              description: 'Current contract storage state',
+              example: { totalSupply: '0', balances: {} },
+            },
           },
         },
         // Result of a sandbox contract call. success=true includes a metrics object;
@@ -1611,16 +1774,38 @@ const options: swaggerJsdoc.Options = {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
-            result: { nullable: true, description: 'Return value from the function', example: { transferred: '1000000000' } },
-            error: { type: 'string', nullable: true, description: 'Error message when success is false', example: null },
+            result: {
+              nullable: true,
+              description: 'Return value from the function',
+              example: { transferred: '1000000000' },
+            },
+            error: {
+              type: 'string',
+              nullable: true,
+              description: 'Error message when success is false',
+              example: null,
+            },
             events: {
               type: 'array',
               items: { type: 'object' },
               example: [{ type: 'transfer', from: 'GBZX...', to: 'GAAZ...', amount: '1000000000' }],
             },
-            trace: { type: 'array', items: { type: 'object' }, description: 'Host-function execution trace steps', example: [] },
-            stateBefore: { type: 'object', description: 'Contract storage before the call', example: { totalSupply: '0' } },
-            stateAfter: { type: 'object', description: 'Contract storage after the call', example: { totalSupply: '1000000000' } },
+            trace: {
+              type: 'array',
+              items: { type: 'object' },
+              description: 'Host-function execution trace steps',
+              example: [],
+            },
+            stateBefore: {
+              type: 'object',
+              description: 'Contract storage before the call',
+              example: { totalSupply: '0' },
+            },
+            stateAfter: {
+              type: 'object',
+              description: 'Contract storage after the call',
+              example: { totalSupply: '1000000000' },
+            },
             metrics: {
               type: 'object',
               nullable: true,
@@ -1632,7 +1817,12 @@ const options: swaggerJsdoc.Options = {
                 writeBytes: { type: 'integer', example: 512 },
               },
             },
-            callId: { type: 'string', nullable: true, description: 'DB record ID (present when success is false)', example: null },
+            callId: {
+              type: 'string',
+              nullable: true,
+              description: 'DB record ID (present when success is false)',
+              example: null,
+            },
           },
         },
         // A sandbox session snapshot (SandboxSnapshot Prisma record).
@@ -1642,7 +1832,11 @@ const options: swaggerJsdoc.Options = {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2snap0001' },
             sessionId: { type: 'string', example: 'clz9q1x4t0000s6h2sbox0001' },
             name: { type: 'string', example: 'after-deploy' },
-            state: { type: 'object', description: 'Full runtime block captured at snapshot time', example: { ledgerSequence: 5, accounts: {}, contracts: {} } },
+            state: {
+              type: 'object',
+              description: 'Full runtime block captured at snapshot time',
+              example: { ledgerSequence: 5, accounts: {}, contracts: {} },
+            },
             createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
           },
         },
@@ -1652,13 +1846,29 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2fuzz0001' },
             sessionId: { type: 'string', example: 'clz9q1x4t0000s6h2sbox0001' },
-            contractId: { type: 'string', example: 'CALLD5GHXR4QSTKHSWQEK4UVMHM4QHU4KZ5G4SBKWY7C7TXKZ45RJ4M5' },
-            status: { type: 'string', description: 'running | completed | cancelled', example: 'completed' },
-            strategies: { type: 'array', items: { type: 'object' }, example: [{ type: 'known_attack', iterations: 100 }] },
+            contractId: {
+              type: 'string',
+              example: 'CALLD5GHXR4QSTKHSWQEK4UVMHM4QHU4KZ5G4SBKWY7C7TXKZ45RJ4M5',
+            },
+            status: {
+              type: 'string',
+              description: 'running | completed | cancelled',
+              example: 'completed',
+            },
+            strategies: {
+              type: 'array',
+              items: { type: 'object' },
+              example: [{ type: 'known_attack', iterations: 100 }],
+            },
             totalIterations: { type: 'integer', example: 100 },
             uniqueFindings: { type: 'integer', example: 3 },
             startedAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
-            completedAt: { type: 'string', format: 'date-time', nullable: true, example: '2026-06-23T00:00:01.000Z' },
+            completedAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              example: '2026-06-23T00:00:01.000Z',
+            },
           },
         },
         // A single finding from a fuzz run (FuzzFinding Prisma record from runtime.ts).
@@ -1667,11 +1877,26 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2find0001' },
             fuzzRunId: { type: 'string', example: 'clz9q1x4t0000s6h2fuzz0001' },
-            severity: { type: 'string', description: 'critical | error | warning | info', example: 'critical' },
+            severity: {
+              type: 'string',
+              description: 'critical | error | warning | info',
+              example: 'critical',
+            },
             title: { type: 'string', example: 'Potential access-control bypass' },
-            description: { type: 'string', example: 'Template accepts privileged functions without an admin gate.' },
-            callSequence: { type: 'array', items: { type: 'object' }, example: [{ function: 'initialize' }, { function: 'mint' }] },
-            stateDump: { type: 'object', description: 'Contract storage state at the time of the finding', example: { totalSupply: '0' } },
+            description: {
+              type: 'string',
+              example: 'Template accepts privileged functions without an admin gate.',
+            },
+            callSequence: {
+              type: 'array',
+              items: { type: 'object' },
+              example: [{ function: 'initialize' }, { function: 'mint' }],
+            },
+            stateDump: {
+              type: 'object',
+              description: 'Contract storage state at the time of the finding',
+              example: { totalSupply: '0' },
+            },
             reproducible: { type: 'boolean', example: true },
             createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
           },
@@ -1682,9 +1907,23 @@ const options: swaggerJsdoc.Options = {
           properties: {
             runId: { type: 'string', example: 'clz9q1x4t0000s6h2cirun001' },
             passed: { type: 'boolean', example: true },
-            failure: { type: 'string', nullable: true, description: 'First assertion failure message, or null', example: null },
-            results: { type: 'array', items: { type: 'object' }, description: 'Per-step output', example: [] },
-            logs: { type: 'array', items: { type: 'object' }, example: [{ action: 'deploy', contractId: 'CALLD...' }] },
+            failure: {
+              type: 'string',
+              nullable: true,
+              description: 'First assertion failure message, or null',
+              example: null,
+            },
+            results: {
+              type: 'array',
+              items: { type: 'object' },
+              description: 'Per-step output',
+              example: [],
+            },
+            logs: {
+              type: 'array',
+              items: { type: 'object' },
+              example: [{ action: 'deploy', contractId: 'CALLD...' }],
+            },
           },
         },
         // A view-only session share link (SandboxShare Prisma record).
@@ -1693,7 +1932,11 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: { type: 'string', example: 'clz9q1x4t0000s6h2share001' },
             sessionId: { type: 'string', example: 'clz9q1x4t0000s6h2sbox0001' },
-            shareId: { type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440000' },
+            shareId: {
+              type: 'string',
+              format: 'uuid',
+              example: '550e8400-e29b-41d4-a716-446655440000',
+            },
             viewOnly: { type: 'boolean', example: true },
             snapshotState: { type: 'object', description: 'Runtime state at share creation time' },
             expiresAt: { type: 'string', format: 'date-time', nullable: true, example: null },
@@ -1711,13 +1954,20 @@ const options: swaggerJsdoc.Options = {
                 properties: {
                   type: { type: 'string', example: 'storage' },
                   severity: { type: 'string', example: 'medium' },
-                  message: { type: 'string', example: 'Cache frequently-read values locally before repeated reads.' },
+                  message: {
+                    type: 'string',
+                    example: 'Cache frequently-read values locally before repeated reads.',
+                  },
                   estimatedSavings: { type: 'string', example: '500 CPU' },
                 },
               },
             },
             totalEstimatedSavings: { type: 'string', example: '1500 CPU / 64KB memory' },
-            hotPaths: { type: 'array', items: { type: 'string' }, example: ['MyToken: 40% of total gas'] },
+            hotPaths: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['MyToken: 40% of total gas'],
+            },
           },
         },
         // Invariant or assertion verification result (verifyInvariant from runtime.ts).
@@ -1725,10 +1975,399 @@ const options: swaggerJsdoc.Options = {
           type: 'object',
           properties: {
             passed: { type: 'boolean', example: true },
-            checker: { type: 'string', description: 'Verification checker used (e.g. smt)', example: 'smt' },
+            checker: {
+              type: 'string',
+              description: 'Verification checker used (e.g. smt)',
+              example: 'smt',
+            },
             invariant: { type: 'string', example: 'balance <= totalSupply' },
-            counterexample: { type: 'object', nullable: true, description: 'Failing counterexample when passed is false', example: null },
-            bound: { type: 'object', nullable: true, description: 'Bound constraints passed in the request', example: null },
+            counterexample: {
+              type: 'object',
+              nullable: true,
+              description: 'Failing counterexample when passed is false',
+              example: null,
+            },
+            bound: {
+              type: 'object',
+              nullable: true,
+              description: 'Bound constraints passed in the request',
+              example: null,
+            },
+          },
+        },
+        // ── Reputation (#251) ─────────────────────────────────────────────────
+        // Per-signal breakdown item inside a ReputationScoreResult.
+        ReputationBreakdownItem: {
+          type: 'object',
+          properties: {
+            signal: { type: 'string', example: 'on_chain_activity' },
+            category: { type: 'string', example: 'activity' },
+            points: { type: 'number', example: 18 },
+            maxPoints: { type: 'number', example: 25 },
+            evidence: { type: 'string', example: 'tx_count=45,unique_contracts=12' },
+          },
+        },
+        // Per-chain score inside a ReputationScoreResult.
+        ReputationChainScore: {
+          type: 'object',
+          properties: {
+            chainId: { type: 'string', example: 'stellar' },
+            address: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            score: { type: 'number', example: 72.5 },
+            breakdown: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/ReputationBreakdownItem' },
+            },
+          },
+        },
+        // A badge earned by an address (Badge interface from reputation/types.ts).
+        ReputationBadge: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'whale' },
+            name: { type: 'string', example: 'Whale' },
+            description: { type: 'string', example: 'Holds a large native balance' },
+            criteria: { type: 'string', example: 'native_balance > 10000' },
+            earnedAt: { type: 'string', format: 'date-time', nullable: true, example: null },
+            verifiable: { type: 'boolean', example: true },
+          },
+        },
+        // Sybil risk assessment returned by the reputation oracle (SybilAssessment from types.ts).
+        SybilAssessment: {
+          type: 'object',
+          properties: {
+            address: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            isSuspicious: { type: 'boolean', example: false },
+            risk: { type: 'number', description: 'Sybil risk score (0-1)', example: 0.12 },
+            confidence: { type: 'number', example: 0.85 },
+            reasons: { type: 'array', items: { type: 'string' }, example: [] },
+            cluster: { type: 'string', nullable: true, example: null },
+          },
+        },
+        // Proof envelope for a computed reputation score (ReputationProof from types.ts).
+        ReputationProof: {
+          type: 'object',
+          properties: {
+            algorithmVersion: { type: 'string', example: 'reputation-oracle-v1' },
+            address: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            linkedAddresses: { type: 'array', items: { type: 'string' }, example: [] },
+            chainIds: { type: 'array', items: { type: 'string' }, example: ['stellar'] },
+            score: { type: 'number', example: 72.5 },
+            inputHash: { type: 'string', example: 'e5f40312233445566778899aabbccddeeff00112' },
+            breakdownHash: { type: 'string', example: 'a1b2c3d4e5f67890abcdef1234567890abcdef12' },
+            badgeHash: { type: 'string', example: 'f0e1d2c3b4a5968778695a4b3c2d1e0f12345678' },
+          },
+        },
+        // Full reputation score result (ScoreResult from reputation/types.ts).
+        ReputationScoreResult: {
+          type: 'object',
+          properties: {
+            address: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            score: { type: 'number', example: 72.5 },
+            rankCategory: { type: 'string', example: 'respected' },
+            activeChains: { type: 'array', items: { type: 'string' }, example: ['stellar'] },
+            linkedAddresses: { type: 'array', items: { type: 'string' }, example: [] },
+            chainScores: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/ReputationChainScore' },
+            },
+            breakdown: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/ReputationBreakdownItem' },
+            },
+            badges: { type: 'array', items: { $ref: '#/components/schemas/ReputationBadge' } },
+            sybil: { $ref: '#/components/schemas/SybilAssessment' },
+            proof: { $ref: '#/components/schemas/ReputationProof' },
+          },
+        },
+        // Leaderboard entry (LeaderboardEntry from reputation/types.ts).
+        LeaderboardEntry: {
+          type: 'object',
+          properties: {
+            rank: { type: 'integer', example: 1 },
+            address: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            score: { type: 'number', example: 95.3 },
+            activeChains: { type: 'integer', example: 3 },
+            linkedAddresses: { type: 'array', items: { type: 'string' }, example: [] },
+            badges: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['whale', 'governance_voter'],
+            },
+            sybilRisk: { type: 'number', example: 0.05 },
+          },
+        },
+        // Full oracle reputation response (OracleReputationResponse from reputation/types.ts).
+        OracleReputationResponse: {
+          type: 'object',
+          properties: {
+            address: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            score: { type: 'number', example: 72.5 },
+            breakdown: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/ReputationBreakdownItem' },
+            },
+            badges: { type: 'array', items: { $ref: '#/components/schemas/ReputationBadge' } },
+            attestations: { type: 'array', items: { type: 'object' } },
+            credentials: { type: 'array', items: { type: 'object' } },
+            sybil: { $ref: '#/components/schemas/SybilAssessment' },
+            proof: { $ref: '#/components/schemas/ReputationProof' },
+          },
+        },
+        // Prisma ReputationProfile record (used by search and history endpoints).
+        ReputationProfileRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'clz9q1x4t0000s6h2profil01' },
+            address: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            chain: { type: 'string', nullable: true, example: 'stellar' },
+            combinedScore: { type: 'number', nullable: true, example: 72.5 },
+            sorobanScore: { type: 'number', nullable: true, example: 65.0 },
+            stellarScore: { type: 'number', nullable: true, example: 80.0 },
+            ethScore: { type: 'number', nullable: true, example: null },
+            solScore: { type: 'number', nullable: true, example: null },
+            categoryScores: { type: 'object', nullable: true, example: null },
+            signalBreakdown: { type: 'object', nullable: true, example: null },
+            categories: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['activity', 'governance'],
+            },
+            badgeIds: { type: 'array', items: { type: 'string' }, example: ['whale'] },
+            lastUpdated: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              example: '2026-06-23T00:00:00.000Z',
+            },
+            createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+            updatedAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+          },
+        },
+        // Prisma Attestation record returned by attest and attestation list endpoints.
+        ReputationAttestationRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'clz9q1x4t0000s6h2attest01' },
+            uid: { type: 'string', example: 'e5f40312233445566778899aabbccddeeff00112' },
+            profileId: { type: 'string', example: 'clz9q1x4t0000s6h2profil01' },
+            chainId: { type: 'string', example: 'stellar' },
+            schemaId: { type: 'string', example: 'schema-kyc-v1' },
+            attester: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            subject: {
+              type: 'string',
+              example: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+            },
+            recipient: { type: 'string', nullable: true, example: null },
+            revoked: { type: 'boolean', example: false },
+            signature: { type: 'string', nullable: true, example: null },
+            transactionHash: { type: 'string', nullable: true, example: null },
+            blockNumber: { type: 'integer', nullable: true, example: null },
+            data: { type: 'object', nullable: true, example: null },
+            verified: { type: 'boolean', example: true },
+            verificationMsg: {
+              type: 'string',
+              nullable: true,
+              example: 'attestation has on-chain transaction evidence or valid signature',
+            },
+            createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+            updatedAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+          },
+        },
+        // Prisma VerifiableCredential record returned by credential endpoints.
+        ReputationVerifiableCredential: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'clz9q1x4t0000s6h2vc000001' },
+            profileId: { type: 'string', example: 'clz9q1x4t0000s6h2profil01' },
+            credentialId: { type: 'string', example: 'https://example.edu/credentials/1' },
+            context: { type: 'string', nullable: true },
+            type: { type: 'string', nullable: true },
+            issuer: { type: 'string', nullable: true, example: 'did:example:issuer' },
+            issuanceDate: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              example: '2026-06-23T00:00:00.000Z',
+            },
+            expirationDate: { type: 'string', format: 'date-time', nullable: true, example: null },
+            subjectId: { type: 'string', nullable: true },
+            subjectData: { type: 'object', nullable: true },
+            proofType: { type: 'string', nullable: true, example: 'Ed25519Signature2020' },
+            proofCreated: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              example: '2026-06-23T00:00:00.000Z',
+            },
+            verificationMethod: { type: 'string', nullable: true },
+            proofPurpose: { type: 'string', nullable: true, example: 'assertionMethod' },
+            proofValue: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+          },
+        },
+        // Prisma LinkedIdentity record (fields from schema.prisma; message/signature not in model).
+        ReputationLinkedIdentity: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'clz9q1x4t0000s6h2link0001' },
+            profileId: { type: 'string', example: 'clz9q1x4t0000s6h2profil01' },
+            chainId: { type: 'string', example: 'stellar' },
+            address: {
+              type: 'string',
+              example: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+            },
+            verified: { type: 'boolean', example: true },
+            metadata: { type: 'object', nullable: true, example: null },
+            lastVerified: { type: 'string', format: 'date-time', nullable: true, example: null },
+            createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+            updatedAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+          },
+        },
+        // Prisma Endorsement record.
+        ReputationEndorsement: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'clz9q1x4t0000s6h2endorse1' },
+            profileId: { type: 'string', example: 'clz9q1x4t0000s6h2profil01' },
+            chainId: { type: 'string', example: 'stellar' },
+            endorser: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            subject: {
+              type: 'string',
+              example: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+            },
+            weight: { type: 'number', nullable: true, example: 1 },
+            timestamp: { type: 'string', format: 'date-time', nullable: true, example: null },
+            transactionHash: { type: 'string', nullable: true, example: null },
+            createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+          },
+        },
+        // Prisma ReputationDispute record; GET /disputes/:id includes an embedded votes array.
+        ReputationDisputeRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'clz9q1x4t0000s6h2dispute1' },
+            profileId: { type: 'string', example: 'clz9q1x4t0000s6h2profil01' },
+            challenger: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            respondent: {
+              type: 'string',
+              example: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+            },
+            status: { type: 'string', enum: ['open', 'resolved'], example: 'open' },
+            challenge: { type: 'string', nullable: true, example: 'Sybil farming accusations' },
+            evidenceHash: { type: 'string', nullable: true, example: 'e5f40312...' },
+            quorumVotes: { type: 'integer', nullable: true, example: 5 },
+            outcome: {
+              type: 'string',
+              nullable: true,
+              enum: ['upheld', 'rejected', 'timeout'],
+              example: null,
+            },
+            resolvedAt: { type: 'string', format: 'date-time', nullable: true, example: null },
+            createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+            updatedAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+            votes: {
+              type: 'array',
+              description: 'Included only when fetched via GET /disputes/:id',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  disputeId: { type: 'string' },
+                  voter: { type: 'string' },
+                  vote: { type: 'string', nullable: true },
+                  weight: { type: 'number', nullable: true },
+                  signature: { type: 'string', nullable: true },
+                  transactionHash: { type: 'string', nullable: true },
+                  createdAt: { type: 'string', format: 'date-time' },
+                },
+              },
+              example: [],
+            },
+          },
+        },
+        // Prisma ReputationNft record.
+        ReputationNftRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'clz9q1x4t0000s6h2nft00001' },
+            address: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            badgeType: { type: 'string', example: 'whale' },
+            tokenId: { type: 'string', nullable: true, example: 'reputation-nft-GBZXN7PI-whale' },
+            mintedTxHash: { type: 'string', nullable: true, example: 'tx-abc123def4' },
+            createdAt: { type: 'string', format: 'date-time', example: '2026-06-23T00:00:00.000Z' },
+          },
+        },
+        // Verified identity link result (VerifiedIdentityLink from reputation/types.ts).
+        VerifiedIdentityLink: {
+          type: 'object',
+          properties: {
+            chainId: { type: 'string', example: 'stellar' },
+            address: {
+              type: 'string',
+              example: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+            },
+            canonicalAddress: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            verified: { type: 'boolean', example: true },
+            messageHash: { type: 'string', example: 'a1b2c3d4e5f67890abcdef1234567890abcdef12' },
+          },
+        },
+        // Trust path between two addresses (TrustPath from reputation/types.ts).
+        TrustPath: {
+          type: 'object',
+          properties: {
+            from: {
+              type: 'string',
+              example: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+            },
+            to: {
+              type: 'string',
+              example: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+            },
+            path: {
+              type: 'array',
+              items: { type: 'string' },
+              nullable: true,
+              example: ['GBZX...', 'GAAZ...'],
+            },
+            distance: { type: 'integer', example: 2 },
+            chainIds: { type: 'array', items: { type: 'string' }, example: ['stellar'] },
           },
         },
       },
